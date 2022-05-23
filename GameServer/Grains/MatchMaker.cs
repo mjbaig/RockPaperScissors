@@ -1,6 +1,6 @@
 using Orleans;
 
-namespace GameServer.Grains.Interfaces;
+namespace GameServer.Grains;
 
 public class IMatchMaker: IGrainWithGuidKey
 {
