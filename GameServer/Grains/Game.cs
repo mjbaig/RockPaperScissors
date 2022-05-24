@@ -231,4 +231,5 @@ public class MatchResponse
     public RockPaperScissorsMove PlayerMove { get; }
 
     public MatchResult PlayerResult { get; }
+    
 }

@@ -7,12 +7,11 @@ public interface IPlayer : IGrainWithStringKey
     Task JoinQueue();
 
     Task StartMatch(IGame game);
-
-    Task EndMatch();
-
+    
     Task RoundResult(MatchResponse matchResponse);
 
-    Task SendMove();
+    Task SendMove(RockPaperScissorsMove move);
+    
 }
 
 public class Player : Grain, IPlayer
@@ -37,6 +36,8 @@ public class Player : Grain, IPlayer
     private IGame? _game;
 
     private State _state;
+
+    private GameState _gameState;
 
     private int _wins;
 
@@ -78,29 +79,45 @@ public class Player : Grain, IPlayer
 
         _game = game;
 
+        _gameState = GameState.Ready;
+        
+        _logger.LogInformation("Joined Game");
+
         return Task.CompletedTask;
     }
 
     // This player sends a move to the Game grain and enter a waiting state.
-    public Task SendMove()
+    public Task SendMove(RockPaperScissorsMove move)
     {
+        if (_game != null)
+        {
+            _game.SubmitMove(this.GetPrimaryKeyString(), move);
+
+            _gameState = GameState.Waiting;
+        }
+        else
+        {
+            throw new Exception("You weren't in a game dumbutt");
+        }
+        
         return Task.CompletedTask;
     }
 
     // The Game grain calls this method to send the player the match results
     public Task RoundResult(MatchResponse matchResponse)
     {
+
+        if (matchResponse.GameState == Grains.GameState.Ended)
+        {
+            _state = State.InMenu;
+            _game = null;
+        }
+        else
+        {
+            _gameState = GameState.Ready;
+        }
+        
         _logger.LogInformation(matchResponse.PlayerResult == MatchResult.Win ? "You win" : "You didn't win");
-        return Task.CompletedTask;
-    }
-
-    // The Game grain calls this method to end the game that they're in.
-    public Task EndMatch()
-    {
-        _state = State.InMenu;
-
-        _game = null;
-
         return Task.CompletedTask;
     }
 }

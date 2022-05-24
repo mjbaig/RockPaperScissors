@@ -11,7 +11,7 @@ public interface IMatchMaker: IGrainWithGuidKey
 public class MatchMaker : Grain, IMatchMaker
 {
 
-    private Queue<IPlayer> _players;
+    private readonly Queue<IPlayer> _players;
 
     private readonly ILogger<MatchMaker> _logger;
 
@@ -37,6 +37,8 @@ public class MatchMaker : Grain, IMatchMaker
             
             game.RegisterPlayer(_players.Dequeue());
         }
+        
+        _logger.LogInformation("Number of players in queue: {}", _players.Count);
 
         return Task.CompletedTask;
     }
