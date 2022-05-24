@@ -2,21 +2,17 @@ using Orleans;
 
 namespace GameServer.Grains;
 
-public enum Move
-{
-    ROCK,
-    PAPER,
-    Scissors,
-}
-
 public interface IPlayer : IGrainWithStringKey
 {
-    public Task JoinQueue();
+    Task JoinQueue();
 
-    public Task StartMatch(IGame game);
+    Task StartMatch(IGame game);
 
-    public Task EndMatch();
-    
+    Task EndMatch();
+
+    Task RoundResult(MatchResponse matchResponse);
+
+    Task SendMove();
 }
 
 public class Player : Grain, IPlayer
@@ -26,6 +22,12 @@ public class Player : Grain, IPlayer
         IN_GAME,
         IN_QUEUE,
         IN_MENU,
+    }
+
+    private enum GameState
+    {
+        READY,
+        WAITING,
     }
 
     private int number { get; set; }
@@ -67,6 +69,18 @@ public class Player : Grain, IPlayer
         _state = State.IN_GAME;
 
         _game = game;
+        
+        return Task.CompletedTask;
+    }
+
+    public Task SendMove()
+    {
+        
+        return Task.CompletedTask;
+    }
+
+    public Task RoundResult(MatchResponse matchResponse)
+    {
         
         return Task.CompletedTask;
     }
