@@ -7,37 +7,40 @@ public interface IPlayer : IGrainWithStringKey
     Task JoinQueue();
 
     Task StartMatch(IGame game);
-    
+
     Task RoundResult(MatchResponse matchResponse);
 
+    Task<PlayerState> GetState();
+
+    Task<PlayerGameState> GetGameState();
+
     Task SendMove(RockPaperScissorsMove move);
-    
+}
+
+public enum PlayerState
+{
+    InGame,
+    InQueue,
+    InMenu,
+}
+
+public enum PlayerGameState
+{
+    Ready,
+    Waiting,
 }
 
 public class Player : Grain, IPlayer
 {
-    private enum State
-    {
-        InGame,
-        InQueue,
-        InMenu,
-    }
-
-    private enum GameState
-    {
-        Ready,
-        Waiting,
-    }
-
     private int number { get; set; }
 
     private readonly ILogger<Player> _logger;
 
     private IGame? _game;
 
-    private State _state;
+    private PlayerState _playerState;
 
-    private GameState _gameState;
+    private PlayerGameState _playerGameState;
 
     private int _wins;
 
@@ -47,7 +50,7 @@ public class Player : Grain, IPlayer
     {
         number = 0;
         _logger = logger;
-        _state = State.InMenu;
+        _playerState = PlayerState.InMenu;
         _wins = 0;
         _losses = 0;
     }
@@ -55,19 +58,19 @@ public class Player : Grain, IPlayer
     // Player adds self to a queue in the match maker grain.
     public Task JoinQueue()
     {
-        if (this._state == State.InGame)
+        if (this._playerState == PlayerState.InGame)
         {
             throw new Exception("You're already in a game");
         }
 
-        if (this._state == State.InQueue)
+        if (this._playerState == PlayerState.InQueue)
         {
             throw new Exception("You're already in the queue");
         }
 
         var matchMaker = GrainFactory.GetGrain<IMatchMaker>(Guid.Empty);
 
-        _state = State.InQueue;
+        _playerState = PlayerState.InQueue;
 
         return matchMaker.AddToQueue(this);
     }
@@ -75,12 +78,12 @@ public class Player : Grain, IPlayer
     // The Game grain calls this method to put the player into a game state.
     public Task StartMatch(IGame game)
     {
-        _state = State.InGame;
+        _playerState = PlayerState.InGame;
 
         _game = game;
 
-        _gameState = GameState.Ready;
-        
+        _playerGameState = PlayerGameState.Ready;
+
         _logger.LogInformation("Joined Game");
 
         return Task.CompletedTask;
@@ -93,31 +96,40 @@ public class Player : Grain, IPlayer
         {
             _game.SubmitMove(this.GetPrimaryKeyString(), move);
 
-            _gameState = GameState.Waiting;
+            _playerGameState = PlayerGameState.Waiting;
         }
         else
         {
             throw new Exception("You weren't in a game dumbutt");
         }
-        
+
         return Task.CompletedTask;
     }
 
     // The Game grain calls this method to send the player the match results
     public Task RoundResult(MatchResponse matchResponse)
     {
-
         if (matchResponse.GameState == Grains.GameState.Ended)
         {
-            _state = State.InMenu;
+            _playerState = PlayerState.InMenu;
             _game = null;
         }
         else
         {
-            _gameState = GameState.Ready;
+            _playerGameState = PlayerGameState.Ready;
         }
-        
+
         _logger.LogInformation(matchResponse.PlayerResult == MatchResult.Win ? "You win" : "You didn't win");
         return Task.CompletedTask;
+    }
+
+    public Task<PlayerState> GetState()
+    {
+        return Task.FromResult<PlayerState>(_playerState);
+    }
+    
+    public Task<PlayerGameState> GetGameState()
+    {
+        return Task.FromResult(_playerGameState);
     }
 }

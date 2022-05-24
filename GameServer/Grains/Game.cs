@@ -19,7 +19,11 @@ public class Game : Grain, IGame
 
     private readonly ILogger<Game> _logger;
 
+    private string _playerOneId;
+    
     private int _playerOneWins;
+
+    private string _playerTwoId;
 
     private int _playerTwoWins;
 
@@ -66,13 +70,8 @@ public class Game : Grain, IGame
             //TODO call players
             var matchResponse = ExecuteTurn();
 
-            var playerKeys = _playerKeyMap.Keys.ToList();
-
-            var playerOneId = playerKeys[0];
-            var playerTwoId = playerKeys[1];
-
-            _playerKeyMap[playerOneId].RoundResult(matchResponse[playerOneId]);
-            _playerKeyMap[playerTwoId].RoundResult(matchResponse[playerTwoId]);
+            _playerKeyMap[_playerOneId].RoundResult(matchResponse[_playerOneId]);
+            _playerKeyMap[_playerTwoId].RoundResult(matchResponse[_playerTwoId]);
         }
 
         return Task.CompletedTask;
@@ -186,9 +185,13 @@ public class Game : Grain, IGame
         if (_playerCount == 2)
         {
             var playerKeys = _playerKeyMap.Keys.ToList();
-            var player1 = _playerKeyMap[playerKeys[0]];
+            
+            _playerOneId = playerKeys[0];
+            var player1 = _playerKeyMap[_playerOneId];
             player1.StartMatch(this);
-            var player2 = _playerKeyMap[playerKeys[1]];
+            
+            _playerTwoId = playerKeys[1];
+            var player2 = _playerKeyMap[_playerTwoId];
             player2.StartMatch(this);
         }
 
