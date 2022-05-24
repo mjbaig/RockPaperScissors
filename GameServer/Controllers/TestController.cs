@@ -5,14 +5,10 @@ using Orleans;
 namespace GameServer.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("test")]
 public class TestController : ControllerBase
 {
-    private static readonly string[] Summaries = new[]
-    {
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    };
-
+    
     private readonly ILogger<TestController> _logger;
 
     private readonly IClusterClient _client;
@@ -23,13 +19,13 @@ public class TestController : ControllerBase
         _client = client;
     }
 
-    [HttpGet(Name = "GetNumber")]
-    public async Task<int> Get()
+    [HttpGet("{id}")]
+    public async Task<string> Get(string id)
     {
-        var player = _client.GetGrain<IPlayer>("_key");
+        var player = _client.GetGrain<IPlayer>(id);
 
-        var number = await player.GetNumber();
+        await player.JoinQueue();
 
-        return number;
+        return "joined Queue";
     }
 }
