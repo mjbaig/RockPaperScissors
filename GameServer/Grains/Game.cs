@@ -39,12 +39,12 @@ public class Game : Grain, IGame
 
         _playerTwoWins = 0;
 
-        _gameState = GameState.ONGOING;
+        _gameState = GameState.Ongoing;
     }
 
     public Task SubmitMove(string playerKey, RockPaperScissorsMove move)
     {
-        if (_gameState == GameState.ENDED)
+        if (_gameState == GameState.Ended)
         {
             throw new Exception("this game has ended");
         }
@@ -96,70 +96,70 @@ public class Game : Grain, IGame
         {
             if (playerTwoMove == RockPaperScissorsMove.Rock)
             {
-                playerOneMatchResult = MatchResult.WIN;
-                playerTwoMatchResult = MatchResult.LOSE;
+                playerOneMatchResult = MatchResult.Win;
+                playerTwoMatchResult = MatchResult.Lose;
             }
             else if (playerTwoMove == RockPaperScissorsMove.Scissors)
             {
-                playerOneMatchResult = MatchResult.LOSE;
-                playerTwoMatchResult = MatchResult.WIN;
+                playerOneMatchResult = MatchResult.Lose;
+                playerTwoMatchResult = MatchResult.Win;
             }
             else
             {
-                playerOneMatchResult = MatchResult.TIE;
-                playerTwoMatchResult = MatchResult.TIE;
+                playerOneMatchResult = MatchResult.Tie;
+                playerTwoMatchResult = MatchResult.Tie;
             }
         }
         else if (playerOneMove == RockPaperScissorsMove.Rock)
         {
             if (playerTwoMove == RockPaperScissorsMove.Paper)
             {
-                playerOneMatchResult = MatchResult.LOSE;
-                playerTwoMatchResult = MatchResult.WIN;
+                playerOneMatchResult = MatchResult.Lose;
+                playerTwoMatchResult = MatchResult.Win;
             }
             else if (playerTwoMove == RockPaperScissorsMove.Scissors)
             {
-                playerOneMatchResult = MatchResult.WIN;
-                playerTwoMatchResult = MatchResult.LOSE;
+                playerOneMatchResult = MatchResult.Win;
+                playerTwoMatchResult = MatchResult.Lose;
             }
             else
             {
-                playerOneMatchResult = MatchResult.TIE;
-                playerTwoMatchResult = MatchResult.TIE;
+                playerOneMatchResult = MatchResult.Tie;
+                playerTwoMatchResult = MatchResult.Tie;
             }
         }
         else
         {
             if (playerTwoMove == RockPaperScissorsMove.Paper)
             {
-                playerOneMatchResult = MatchResult.WIN;
-                playerTwoMatchResult = MatchResult.LOSE;
+                playerOneMatchResult = MatchResult.Win;
+                playerTwoMatchResult = MatchResult.Lose;
             }
             else if (playerTwoMove == RockPaperScissorsMove.Rock)
             {
-                playerOneMatchResult = MatchResult.LOSE;
-                playerTwoMatchResult = MatchResult.WIN;
+                playerOneMatchResult = MatchResult.Lose;
+                playerTwoMatchResult = MatchResult.Win;
             }
             else
             {
-                playerOneMatchResult = MatchResult.TIE;
-                playerTwoMatchResult = MatchResult.TIE;
+                playerOneMatchResult = MatchResult.Tie;
+                playerTwoMatchResult = MatchResult.Tie;
             }
         }
 
-        if (playerOneMatchResult == MatchResult.WIN)
+        if (playerOneMatchResult == MatchResult.Win)
         {
             _playerOneWins++;
         }
 
-        if (playerTwoMatchResult == MatchResult.WIN)
+        if (playerTwoMatchResult == MatchResult.Win)
         {
             _playerTwoWins++;
         }
 
         if (_playerOneWins == 2 || _playerTwoWins == 2)
         {
-            _gameState = GameState.ENDED;
+            _gameState = GameState.Ended;
         }
 
         _playerMoveMap = new Dictionary<string, RockPaperScissorsMove>();
@@ -198,15 +198,15 @@ public class Game : Grain, IGame
 
 public enum GameState
 {
-    ONGOING,
-    ENDED,
+    Ongoing,
+    Ended,
 }
 
 public enum MatchResult
 {
-    WIN,
-    LOSE,
-    TIE,
+    Win,
+    Lose,
+    Tie,
 }
 
 public enum RockPaperScissorsMove

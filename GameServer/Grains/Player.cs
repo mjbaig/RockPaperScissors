@@ -19,15 +19,15 @@ public class Player : Grain, IPlayer
 {
     private enum State
     {
-        IN_GAME,
-        IN_QUEUE,
-        IN_MENU,
+        InGame,
+        InQueue,
+        InMenu,
     }
 
     private enum GameState
     {
-        READY,
-        WAITING,
+        Ready,
+        Waiting,
     }
 
     private int number { get; set; }
@@ -38,29 +38,35 @@ public class Player : Grain, IPlayer
 
     private State _state;
 
+    private int _wins;
+
+    private int _losses;
+
     public Player(ILogger<Player> logger)
     {
         number = 0;
         _logger = logger;
-        _state = State.IN_MENU;
+        _state = State.InMenu;
+        _wins = 0;
+        _losses = 0;
     }
 
     // Player adds self to a queue in the match maker grain.
     public Task JoinQueue()
     {
-        if (this._state == State.IN_GAME)
+        if (this._state == State.InGame)
         {
             throw new Exception("You're already in a game");
         }
 
-        if (this._state == State.IN_QUEUE)
+        if (this._state == State.InQueue)
         {
             throw new Exception("You're already in the queue");
         }
 
         var matchMaker = GrainFactory.GetGrain<IMatchMaker>(Guid.Empty);
 
-        _state = State.IN_QUEUE;
+        _state = State.InQueue;
 
         return matchMaker.AddToQueue(this);
     }
@@ -68,7 +74,7 @@ public class Player : Grain, IPlayer
     // The Game grain calls this method to put the player into a game state.
     public Task StartMatch(IGame game)
     {
-        _state = State.IN_GAME;
+        _state = State.InGame;
 
         _game = game;
 
@@ -84,14 +90,14 @@ public class Player : Grain, IPlayer
     // The Game grain calls this method to send the player the match results
     public Task RoundResult(MatchResponse matchResponse)
     {
-        _logger.LogInformation(matchResponse.PlayerResult == MatchResult.WIN ? "You win" : "You didn't win");
+        _logger.LogInformation(matchResponse.PlayerResult == MatchResult.Win ? "You win" : "You didn't win");
         return Task.CompletedTask;
     }
 
     // The Game grain calls this method to end the game that they're in.
     public Task EndMatch()
     {
-        _state = State.IN_MENU;
+        _state = State.InMenu;
 
         _game = null;
 
