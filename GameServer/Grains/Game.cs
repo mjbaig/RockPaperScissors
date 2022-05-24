@@ -48,7 +48,7 @@ public class Game : Grain, IGame
         {
             throw new Exception("this game has ended");
         }
-        
+
         if (!_playerKeyMap.ContainsKey(playerKey))
         {
             throw new Exception("You never registered to play moron");
@@ -64,13 +64,21 @@ public class Game : Grain, IGame
         if (_playerMoveMap.Count == 2)
         {
             //TODO call players
-            _playerMoveMap = new Dictionary<string, RockPaperScissorsMove>();
+            var matchResponse = ExecuteTurn();
+
+            var playerKeys = _playerKeyMap.Keys.ToList();
+
+            var playerOneId = playerKeys[0];
+            var playerTwoId = playerKeys[1];
+
+            _playerKeyMap[playerOneId].RoundResult(matchResponse[playerOneId]);
+            _playerKeyMap[playerTwoId].RoundResult(matchResponse[playerTwoId]);
         }
 
         return Task.CompletedTask;
     }
 
-    private MatchResponse ExecuteTurn()
+    private Dictionary<string, MatchResponse> ExecuteTurn()
     {
         var playerKeys = _playerMoveMap.Keys.ToList();
 
@@ -156,10 +164,13 @@ public class Game : Grain, IGame
 
         _playerMoveMap = new Dictionary<string, RockPaperScissorsMove>();
 
-        return new MatchResponse(playerOneMove,
-            playerOneMatchResult,
-            playerTwoMove,
-            playerTwoMatchResult, playerOneId, playerTwoId, _gameState);
+        var matchResponseDictionary = new Dictionary<string, MatchResponse>
+        {
+            [playerOneId] = new MatchResponse(playerOneMove, playerOneMatchResult, _gameState),
+            [playerTwoId] = new MatchResponse(playerTwoMove, playerTwoMatchResult, _gameState)
+        };
+
+        return matchResponseDictionary;
     }
 
     public Task RegisterPlayer(IPlayer player)
@@ -207,28 +218,17 @@ public enum RockPaperScissorsMove
 
 public class MatchResponse
 {
-    public MatchResponse(RockPaperScissorsMove playerOneMove, MatchResult playerOneResult,
-        RockPaperScissorsMove playerTwoMove, MatchResult playerTwoResult, string playerOneId, string playerTwoId,
+    public MatchResponse(RockPaperScissorsMove playerMove, MatchResult playerResult,
         GameState gameState)
     {
-        this.PlayerOneMove = playerOneMove;
-        this.PlayerOneResult = playerOneResult;
-        this.PlayerTwoMove = playerTwoMove;
-        this.PlayerTwoResult = playerTwoResult;
-        PlayerOneId = playerOneId;
-        PlayerTwoId = playerTwoId;
+        this.PlayerMove = playerMove;
+        this.PlayerResult = playerResult;
         GameState = gameState;
     }
 
-    private GameState GameState { get; }
+    public GameState GameState { get; }
 
-    private string PlayerOneId { get; }
-    private RockPaperScissorsMove PlayerOneMove { get; }
+    public RockPaperScissorsMove PlayerMove { get; }
 
-    private MatchResult PlayerOneResult { get; }
-
-    private string PlayerTwoId { get; }
-    private RockPaperScissorsMove PlayerTwoMove { get; }
-
-    private MatchResult PlayerTwoResult { get; }
+    public MatchResult PlayerResult { get; }
 }
