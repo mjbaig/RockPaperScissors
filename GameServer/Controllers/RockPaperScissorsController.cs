@@ -20,15 +20,49 @@ public class RockPaperScissorsController : ControllerBase
         _client = client;
     }
 
-    [HttpGet("player/{id}")]
-    public async Task<string> Get(string id)
+    [HttpPost("player/{playerId}")]
+    public async Task<string> CreatePlayer(string playerId)
     {
-        var player = _client.GetGrain<IPlayer>(id);
+        _client.GetGrain<IPlayer>(playerId);
+        
+        return playerId;
+    }
+    
+    [HttpPost("player/{playerId}/join-queue")]
+    public async Task<string> JoinQueue(string playerId)
+    {
+        var player = _client.GetGrain<IPlayer>(playerId);
 
         await player.JoinQueue();
-
-        return "joined Queue";
+        
+        return playerId;
     }
+    
+    [HttpPost("player/{playerId}/check-state")]
+    public async Task<string> CheckState(string playerId)
+    {
+        var player = _client.GetGrain<IPlayer>(playerId);
+
+        var state = await player.GetState();
+
+        if (state == PlayerState.InGame)
+        {
+            return "InGame";
+        }
+
+        if (state == PlayerState.InMenu)
+        {
+            return "InMenu";
+        }
+
+        if (state == PlayerState.InQueue)
+        {
+            return "InQueue";
+        }
+
+        return "padfa";
+    }
+    
 
     [HttpGet("/ws/player/{id}")]
     public async Task Socket(string id)
