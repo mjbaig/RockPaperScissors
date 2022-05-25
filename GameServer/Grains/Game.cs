@@ -168,8 +168,8 @@ public class Game : Grain, IGame
 
         var matchResponseDictionary = new Dictionary<string, MatchResponse>
         {
-            [playerOneId] = new MatchResponse(playerOneMove, playerOneMatchResult, _gameState),
-            [playerTwoId] = new MatchResponse(playerTwoMove, playerTwoMatchResult, _gameState)
+            [playerOneId] = new MatchResponse(playerOneMove,playerOneMatchResult, _playerOneWins, _gameState),
+            [playerTwoId] = new MatchResponse(playerTwoMove, playerTwoMatchResult, _playerTwoWins, _gameState)
         };
 
         return matchResponseDictionary;
@@ -233,14 +233,18 @@ public enum RockPaperScissorsMove
 
 public class MatchResponse
 {
-    public MatchResponse(RockPaperScissorsMove playerMove, MatchResult playerResult,
+    public MatchResponse(RockPaperScissorsMove playerMove, 
+        MatchResult playerResult,
+        int playerWins,
         GameState gameState)
     {
-        this.PlayerMove = playerMove;
-        this.PlayerResult = playerResult;
+        PlayerMove = playerMove;
+        PlayerResult = playerResult;
         GameState = gameState;
+        PlayerWins = playerWins;
     }
 
+    public int PlayerWins { get; }
     public GameState GameState { get; }
 
     public RockPaperScissorsMove PlayerMove { get; }

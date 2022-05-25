@@ -11,10 +11,12 @@ public interface IPlayer : IGrainWithStringKey
     Task RoundResult(MatchResponse matchResponse);
 
     Task<PlayerState> GetState();
-
+    
     Task<PlayerGameState> GetGameState();
 
     Task SendMove(RockPaperScissorsMove move);
+
+    Task<MatchResponse> GetLastMatchResponse();
 }
 
 public enum PlayerState
@@ -45,6 +47,8 @@ public class Player : Grain, IPlayer
     private int _wins;
 
     private int _losses;
+
+    public MatchResponse? LastMatchResponse { get; set; }
 
     public Player(ILogger<Player> logger)
     {
@@ -109,7 +113,9 @@ public class Player : Grain, IPlayer
     // The Game grain calls this method to send the player the match results
     public Task RoundResult(MatchResponse matchResponse)
     {
-        if (matchResponse.GameState == Grains.GameState.Ended)
+        LastMatchResponse = matchResponse;
+        
+        if (matchResponse.GameState == GameState.Ended)
         {
             _playerState = PlayerState.InMenu;
             _game = null;
@@ -127,7 +133,17 @@ public class Player : Grain, IPlayer
     {
         return Task.FromResult<PlayerState>(_playerState);
     }
-    
+
+    public Task<MatchResponse> GetLastMatchResponse()
+    {
+        if (LastMatchResponse != null)
+        {
+            return Task.FromResult(LastMatchResponse);
+        }
+
+        throw new Exception("You've never played a match");
+    }
+
     public Task<PlayerGameState> GetGameState()
     {
         return Task.FromResult(_playerGameState);
