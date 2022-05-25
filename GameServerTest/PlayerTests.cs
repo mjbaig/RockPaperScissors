@@ -7,19 +7,13 @@ using Orleans.TestingHost;
 
 namespace GameServerTest;
 
-public class Tests
+public class PlayerTests
 {
     [SetUp]
     public void Setup()
     {
     }
 
-    [Test]
-    public void Test1()
-    {
-        Assert.Pass();
-    }
-    
     [Test]
     public async Task PlayerEntersQueueCorrectly()
     {

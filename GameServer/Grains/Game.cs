@@ -7,6 +7,9 @@ public interface IGame : IGrainWithGuidKey
     public Task SubmitMove(string playerKey, RockPaperScissorsMove move);
 
     public Task RegisterPlayer(IPlayer player);
+
+    public Task<GameState> GetGameState();
+
 }
 
 public class Game : Grain, IGame
@@ -19,11 +22,11 @@ public class Game : Grain, IGame
 
     private readonly ILogger<Game> _logger;
 
-    private string _playerOneId;
+    private string? _playerOneId;
     
     private int _playerOneWins;
 
-    private string _playerTwoId;
+    private string? _playerTwoId;
 
     private int _playerTwoWins;
 
@@ -43,7 +46,7 @@ public class Game : Grain, IGame
 
         _playerTwoWins = 0;
 
-        _gameState = GameState.Ongoing;
+        _gameState = GameState.WaitingForPlayers;
     }
 
     public Task SubmitMove(string playerKey, RockPaperScissorsMove move)
@@ -193,14 +196,23 @@ public class Game : Grain, IGame
             _playerTwoId = playerKeys[1];
             var player2 = _playerKeyMap[_playerTwoId];
             player2.StartMatch(this);
+            
+            _gameState = GameState.Ongoing;
+            
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task<GameState> GetGameState()
+    {
+        return Task.FromResult(_gameState);
     }
 }
 
 public enum GameState
 {
+    WaitingForPlayers,
     Ongoing,
     Ended,
 }
