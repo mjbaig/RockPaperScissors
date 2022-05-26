@@ -1,22 +1,25 @@
+using GameServer.Exceptions;
 using Orleans;
 
 namespace GameServer.Grains;
 
 public interface IPlayer : IGrainWithStringKey
 {
-    Task JoinQueue();
+    Task JoinMatchMakerQueue();
 
-    Task StartMatch(IGame game);
+    Task StartMatchFromGameServer(IGame game);
 
-    Task RoundResult(MatchResponse matchResponse);
+    Task SendResultFromGameServer(MatchResponse matchResponse);
 
     Task<PlayerState> GetState();
-    
+
     Task<PlayerGameState> GetGameState();
 
-    Task SendMove(RockPaperScissorsMove move);
+    Task SendMoveToGameServer(RockPaperScissorsMove move);
 
     Task<MatchResponse> GetLastMatchResponse();
+
+    public List<AvailableMethods> GetAvailableMethods();
 }
 
 public enum PlayerState
@@ -30,6 +33,14 @@ public enum PlayerGameState
 {
     Ready,
     Waiting,
+}
+
+public enum AvailableMethods
+{
+    SendMove,
+    GetState,
+    GetLastMatchResponse,
+    JoinQueue,
 }
 
 public class Player : Grain, IPlayer
@@ -50,6 +61,54 @@ public class Player : Grain, IPlayer
 
     public MatchResponse? LastMatchResponse { get; set; }
 
+    public List<AvailableMethods> GetAvailableMethods()
+    {
+        var availableMethods = (_playerState, _playerGameState) switch
+        {
+            (PlayerState.InGame, PlayerGameState.Ready) => new List<AvailableMethods>()
+            {
+                AvailableMethods.SendMove,
+                AvailableMethods.GetState, 
+                AvailableMethods.GetLastMatchResponse
+            },
+
+            (PlayerState.InGame, PlayerGameState.Waiting) => new List<AvailableMethods>()
+            {
+                AvailableMethods.GetState,
+                AvailableMethods.GetLastMatchResponse
+            },
+
+            (PlayerState.InMenu, _) => new List<AvailableMethods>()
+            {
+                AvailableMethods.JoinQueue,
+                AvailableMethods.GetState,
+                AvailableMethods.GetLastMatchResponse
+            },
+
+            (PlayerState.InQueue, _) => new List<AvailableMethods>()
+            {
+                AvailableMethods.GetState,
+                AvailableMethods.GetLastMatchResponse
+            },
+
+            (_, _) => new List<AvailableMethods>() { AvailableMethods.GetState },
+        };
+
+        return availableMethods;
+    }
+
+    private void ChangePlayerState(PlayerState playerState)
+    {
+        _playerState = playerState;
+        //TODO notify observer
+    }
+
+    private void ChangePlayerGameState(PlayerGameState playerGameState)
+    {
+        _playerGameState = playerGameState;
+        //TODO notify observer
+    }
+
     public Player(ILogger<Player> logger)
     {
         number = 0;
@@ -60,69 +119,68 @@ public class Player : Grain, IPlayer
     }
 
     // Player adds self to a queue in the match maker grain.
-    public Task JoinQueue()
+    public Task JoinMatchMakerQueue()
     {
         if (this._playerState == PlayerState.InGame)
         {
-            throw new Exception("You're already in a game");
+            throw new AlreadyInGameException();
         }
 
         if (this._playerState == PlayerState.InQueue)
         {
-            throw new Exception("You're already in the queue");
+            throw new AlreadyInQueueException();
         }
 
         var matchMaker = GrainFactory.GetGrain<IMatchMaker>(Guid.Empty);
 
-        _playerState = PlayerState.InQueue;
+        ChangePlayerState(PlayerState.InQueue);
 
         return matchMaker.AddToQueue(this);
     }
 
     // The Game grain calls this method to put the player into a game state.
-    public Task StartMatch(IGame game)
+    public Task StartMatchFromGameServer(IGame game)
     {
-        _playerState = PlayerState.InGame;
-
         _game = game;
 
-        _playerGameState = PlayerGameState.Ready;
-
         _logger.LogInformation("Joined Game");
+
+        ChangePlayerState(PlayerState.InGame);
+
+        ChangePlayerGameState(PlayerGameState.Ready);
 
         return Task.CompletedTask;
     }
 
     // This player sends a move to the Game grain and enter a waiting state.
-    public Task SendMove(RockPaperScissorsMove move)
+    public Task SendMoveToGameServer(RockPaperScissorsMove move)
     {
         if (_game != null)
         {
             _game.SubmitMove(this.GetPrimaryKeyString(), move);
-
-            _playerGameState = PlayerGameState.Waiting;
+            ChangePlayerGameState(PlayerGameState.Waiting);
         }
         else
         {
-            throw new Exception("You weren't in a game dumbutt");
+            throw new AlreadyInGameException();
         }
 
         return Task.CompletedTask;
     }
 
     // The Game grain calls this method to send the player the match results
-    public Task RoundResult(MatchResponse matchResponse)
+    public Task SendResultFromGameServer(MatchResponse matchResponse)
     {
         LastMatchResponse = matchResponse;
-        
+
         if (matchResponse.GameState == GameState.Ended)
         {
-            _playerState = PlayerState.InMenu;
+            ChangePlayerState(PlayerState.InMenu);
             _game = null;
         }
         else
         {
-            _playerGameState = PlayerGameState.Ready;
+            ChangePlayerGameState(PlayerGameState.Ready);
         }
 
         _logger.LogInformation(matchResponse.PlayerResult == MatchResult.Win ? "You win" : "You didn't win");
@@ -141,7 +199,7 @@ public class Player : Grain, IPlayer
             return Task.FromResult(LastMatchResponse);
         }
 
-        throw new Exception("You've never played a match");
+        throw new NeverPlayedAGameException();
     }
 
     public Task<PlayerGameState> GetGameState()

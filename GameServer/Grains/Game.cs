@@ -73,8 +73,8 @@ public class Game : Grain, IGame
             //TODO call players
             var matchResponse = ExecuteTurn();
 
-            _playerKeyMap[_playerOneId].RoundResult(matchResponse[_playerOneId]);
-            _playerKeyMap[_playerTwoId].RoundResult(matchResponse[_playerTwoId]);
+            _playerKeyMap[_playerOneId].SendResultFromGameServer(matchResponse[_playerOneId]);
+            _playerKeyMap[_playerTwoId].SendResultFromGameServer(matchResponse[_playerTwoId]);
         }
 
         return Task.CompletedTask;
@@ -191,11 +191,11 @@ public class Game : Grain, IGame
             
             _playerOneId = playerKeys[0];
             var player1 = _playerKeyMap[_playerOneId];
-            player1.StartMatch(this);
+            player1.StartMatchFromGameServer(this);
             
             _playerTwoId = playerKeys[1];
             var player2 = _playerKeyMap[_playerTwoId];
-            player2.StartMatch(this);
+            player2.StartMatchFromGameServer(this);
             
             _gameState = GameState.Ongoing;
             

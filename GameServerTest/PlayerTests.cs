@@ -22,7 +22,7 @@ public class PlayerTests
         cluster.Deploy();
 
         var player = cluster.GrainFactory.GetGrain<IPlayer>("player");
-        await player.JoinQueue();
+        await player.JoinMatchMakerQueue();
 
         var playerState = await player.GetState();
         
@@ -39,10 +39,10 @@ public class PlayerTests
         cluster.Deploy();
 
         var playerOne = cluster.GrainFactory.GetGrain<IPlayer>("player1");
-        await playerOne.JoinQueue();
+        await playerOne.JoinMatchMakerQueue();
         
         var playerTwo = cluster.GrainFactory.GetGrain<IPlayer>("player2");
-        await playerTwo.JoinQueue();
+        await playerTwo.JoinMatchMakerQueue();
 
         var game = cluster.GrainFactory.GetGrain<IGame>(Guid.NewGuid());
 

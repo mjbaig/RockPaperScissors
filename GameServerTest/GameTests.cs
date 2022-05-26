@@ -90,9 +90,9 @@ public class GameTest
             player2State = await player2.GetState();
         }
 
-        await player1.SendMove(RockPaperScissorsMove.Paper);
+        await player1.SendMoveToGameServer(RockPaperScissorsMove.Paper);
 
-        await player2.SendMove(RockPaperScissorsMove.Scissors);
+        await player2.SendMoveToGameServer(RockPaperScissorsMove.Scissors);
 
         var player1GameState = await player1.GetGameState();
         
@@ -148,9 +148,9 @@ public class GameTest
             player2State = await player2.GetState();
         }
 
-        await player1.SendMove(RockPaperScissorsMove.Scissors);
+        await player1.SendMoveToGameServer(RockPaperScissorsMove.Scissors);
 
-        await player2.SendMove(RockPaperScissorsMove.Scissors);
+        await player2.SendMoveToGameServer(RockPaperScissorsMove.Scissors);
 
         var player1GameState = await player1.GetGameState();
         

@@ -33,7 +33,7 @@ public class RockPaperScissorsController : ControllerBase
     {
         var player = _client.GetGrain<IPlayer>(playerId);
 
-        await player.JoinQueue();
+        await player.JoinMatchMakerQueue();
         
         return playerId;
     }
@@ -76,6 +76,22 @@ public class RockPaperScissorsController : ControllerBase
         else
         {
             HttpContext.Response.StatusCode = 400;
+        }
+    }
+
+    public class RockPaperScissorsResponse
+    {
+        private PlayerState _playerState { get; }
+
+        private PlayerGameState _gameState { get; }
+
+        private MatchResponse _matchResponse { get; }
+
+        public RockPaperScissorsResponse(PlayerState playerState, PlayerGameState gameState, MatchResponse matchResponse)
+        {
+            _playerState = playerState;
+            _gameState = gameState;
+            _matchResponse = matchResponse;
         }
     }
 

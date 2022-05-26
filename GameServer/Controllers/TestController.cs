@@ -24,7 +24,7 @@ public class TestController : ControllerBase
     {
         var player = _client.GetGrain<IPlayer>(id);
 
-        await player.JoinQueue();
+        await player.JoinMatchMakerQueue();
 
         return "joined Queue";
     }
