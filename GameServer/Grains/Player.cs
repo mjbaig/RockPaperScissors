@@ -1,4 +1,5 @@
 using GameServer.Exceptions;
+using GameServer.Hubs;
 using Orleans;
 
 namespace GameServer.Grains;
@@ -19,7 +20,9 @@ public interface IPlayer : IGrainWithStringKey
 
     Task<MatchResponse> GetLastMatchResponse();
 
-    public List<AvailableMethods> GetAvailableMethods();
+    Task<List<AvailableMethods>> GetAvailableMethods();
+
+    Task Subscribe(string connectionId);
 }
 
 public enum PlayerState
@@ -59,16 +62,30 @@ public class Player : Grain, IPlayer
 
     private int _losses;
 
+    private string? _connectionId;
+
+    private IGameHub _hub;
+
+    public Player(ILogger<Player> logger, IGameHub hub)
+    {
+        number = 0;
+        _logger = logger;
+        _playerState = PlayerState.InMenu;
+        _wins = 0;
+        _losses = 0;
+        _hub = hub;
+    }
+
     public MatchResponse? LastMatchResponse { get; set; }
 
-    public List<AvailableMethods> GetAvailableMethods()
+    public Task<List<AvailableMethods>> GetAvailableMethods()
     {
         var availableMethods = (_playerState, _playerGameState) switch
         {
             (PlayerState.InGame, PlayerGameState.Ready) => new List<AvailableMethods>()
             {
                 AvailableMethods.SendMove,
-                AvailableMethods.GetState, 
+                AvailableMethods.GetState,
                 AvailableMethods.GetLastMatchResponse
             },
 
@@ -94,28 +111,39 @@ public class Player : Grain, IPlayer
             (_, _) => new List<AvailableMethods>() { AvailableMethods.GetState },
         };
 
-        return availableMethods;
+        return Task.FromResult(availableMethods);
+    }
+
+    public Task Subscribe(string connectionId)
+    {
+        _connectionId = connectionId;
+        return Task.CompletedTask;
+    }
+
+    private void NotifySubscribers()
+    {
+        if (_connectionId != null)
+        {
+            _hub.ReceivePlayerStatus(_playerState, _playerGameState, _connectionId);
+        }
+        else
+        {
+            throw new Exception("You have no connection id... how?");
+        }
     }
 
     private void ChangePlayerState(PlayerState playerState)
     {
         _playerState = playerState;
         //TODO notify observer
+        NotifySubscribers();
     }
 
     private void ChangePlayerGameState(PlayerGameState playerGameState)
     {
         _playerGameState = playerGameState;
         //TODO notify observer
-    }
-
-    public Player(ILogger<Player> logger)
-    {
-        number = 0;
-        _logger = logger;
-        _playerState = PlayerState.InMenu;
-        _wins = 0;
-        _losses = 0;
+        NotifySubscribers();
     }
 
     // Player adds self to a queue in the match maker grain.

@@ -9,51 +9,56 @@ namespace GameServerTest;
 
 public class PlayerTests
 {
+    private TestCluster _testCluster;
     [SetUp]
     public void Setup()
     {
+        var builder = new TestClusterBuilder();
+        builder.AddSiloBuilderConfigurator<Utils.TestSiloConfigurations>();
+        TestCluster cluster = builder.Build();
+        cluster.Deploy();
+        _testCluster = cluster;
     }
 
     [Test]
     public async Task PlayerEntersQueueCorrectly()
     {
-        var builder = new TestClusterBuilder();
-        var cluster = builder.Build();
-        cluster.Deploy();
 
-        var player = cluster.GrainFactory.GetGrain<IPlayer>("player");
+        var player = _testCluster.GrainFactory.GetGrain<IPlayer>("player");
+        await player.Subscribe("1");
         await player.JoinMatchMakerQueue();
 
         var playerState = await player.GetState();
         
-        cluster.StopAllSilos();
-
         Assert.AreEqual(PlayerState.InQueue, playerState);
     }
     
     [Test]
     public async Task PlayerEntersGameIfTwoAreInQueue()
     {
-        var builder = new TestClusterBuilder();
-        var cluster = builder.Build();
-        cluster.Deploy();
-
-        var playerOne = cluster.GrainFactory.GetGrain<IPlayer>("player1");
+        var playerOne = _testCluster.GrainFactory.GetGrain<IPlayer>("player1");
+        await playerOne.Subscribe("1");
         await playerOne.JoinMatchMakerQueue();
         
-        var playerTwo = cluster.GrainFactory.GetGrain<IPlayer>("player2");
+        var playerTwo = _testCluster.GrainFactory.GetGrain<IPlayer>("player2");
+        await playerTwo.Subscribe("2");
         await playerTwo.JoinMatchMakerQueue();
-
-        var game = cluster.GrainFactory.GetGrain<IGame>(Guid.NewGuid());
+        
+        var game = _testCluster.GrainFactory.GetGrain<IGame>(Guid.NewGuid());
 
         await game.RegisterPlayer(playerOne);
         
         await game.RegisterPlayer(playerTwo);
 
         var playerOneState = await playerOne.GetState();
-
-        cluster.StopAllSilos();
-
+        
         Assert.AreEqual(PlayerState.InGame, playerOneState);
     }
+    
+    [TearDown]
+    public void TearDown()
+    {
+        _testCluster.StopAllSilos();
+    }
+
 }

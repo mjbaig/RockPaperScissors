@@ -1,22 +1,32 @@
 using System;
 using System.Threading.Tasks;
 using GameServer.Grains;
+using GameServer.Hubs;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
+using Orleans.Hosting;
 using Orleans.TestingHost;
 
 namespace GameServerTest;
 
 public class GameTest
 {
-    
+    private TestCluster _testCluster;
+    [SetUp]
+    public void Setup()
+    {
+        var builder = new TestClusterBuilder();
+        builder.AddSiloBuilderConfigurator<Utils.TestSiloConfigurations>();
+        TestCluster cluster = builder.Build();
+        cluster.Deploy();
+        _testCluster = cluster;
+    }
+
     [Test]
     public async Task GameStartsInWaitingState()
     {
-        var builder = new TestClusterBuilder();
-        TestCluster cluster = builder.Build();
-        cluster.Deploy();
         
-        var game = cluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
+        var game = _testCluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
 
         var currentGameState = await game.GetGameState();
 
@@ -26,13 +36,10 @@ public class GameTest
     [Test]
     public async Task GameIsWaitAfterOnlyOnePlayerJoins()
     {
-        var builder = new TestClusterBuilder();
-        TestCluster cluster = builder.Build();
-        cluster.Deploy();
 
-        var game = cluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
+        var game = _testCluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
 
-        var player1 = cluster.GrainFactory.GetGrain<IPlayer>("player1");
+        var player1 = _testCluster.GrainFactory.GetGrain<IPlayer>("player1");
 
         await game.RegisterPlayer(player1);
         
@@ -44,14 +51,11 @@ public class GameTest
     [Test]
     public async Task GameIsOngoingAfterPlayersJoinState()
     {
-        var builder = new TestClusterBuilder();
-        TestCluster cluster = builder.Build();
-        cluster.Deploy();
 
-        var game = cluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
+        var game = _testCluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
 
-        var player1 = cluster.GrainFactory.GetGrain<IPlayer>("player1");
-        var player2 = cluster.GrainFactory.GetGrain<IPlayer>("player2");
+        var player1 = _testCluster.GrainFactory.GetGrain<IPlayer>("player1");
+        var player2 = _testCluster.GrainFactory.GetGrain<IPlayer>("player2");
 
         await game.RegisterPlayer(player1);
         await game.RegisterPlayer(player2);
@@ -64,15 +68,15 @@ public class GameTest
     [Test]
     public async Task TestPlayersGetResultsAfterSubmittingMoves()
     {
-        var builder = new TestClusterBuilder();
-        TestCluster cluster = builder.Build();
-        cluster.Deploy();
 
-        var game = cluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
+        var game = _testCluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
 
-        var player1 = cluster.GrainFactory.GetGrain<IPlayer>("player1");
-        var player2 = cluster.GrainFactory.GetGrain<IPlayer>("player2");
+        var player1 = _testCluster.GrainFactory.GetGrain<IPlayer>("player1");
+        var player2 = _testCluster.GrainFactory.GetGrain<IPlayer>("player2");
 
+        await player1.Subscribe("1");
+        await player2.Subscribe("2");
+        
         await game.RegisterPlayer(player1);
         await game.RegisterPlayer(player2);
 
@@ -116,21 +120,20 @@ public class GameTest
         
         Assert.AreEqual(0, playerOneMatchResults.PlayerWins);
         
-        cluster.StopAllSilos();
     }
     
     [Test]
     public async Task TestPlayersGetNoPointsForTie()
     {
-        var builder = new TestClusterBuilder();
-        TestCluster cluster = builder.Build();
-        cluster.Deploy();
+        
+        var game = _testCluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
 
-        var game = cluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
-
-        var player1 = cluster.GrainFactory.GetGrain<IPlayer>("player1");
-        var player2 = cluster.GrainFactory.GetGrain<IPlayer>("player2");
-
+        var player1 = _testCluster.GrainFactory.GetGrain<IPlayer>("player1");
+        var player2 = _testCluster.GrainFactory.GetGrain<IPlayer>("player2");
+        
+        await player1.Subscribe("1");
+        await player2.Subscribe("2");
+        
         await game.RegisterPlayer(player1);
         await game.RegisterPlayer(player2);
 
@@ -173,8 +176,12 @@ public class GameTest
         Assert.AreEqual(0, playerTwoMatchResults.PlayerWins);
         
         Assert.AreEqual(0, playerOneMatchResults.PlayerWins);
-        
-        cluster.StopAllSilos();
     }
-    
+
+    [TearDown]
+    public void TearDown()
+    {
+        _testCluster.StopAllSilos();
+    }
+
 }

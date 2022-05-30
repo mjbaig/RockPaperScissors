@@ -1,16 +1,21 @@
+using GameServer.Hubs;
 using Orleans.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Host.UseOrleans(siloBuilder => { siloBuilder.UseLocalhostClustering();});
+builder.Services.AddSingleton<IGameHub, RockPaperScissorsHub>();
 
-builder.Host.ConfigureLogging(logging => { logging.AddConsole();});
+// Add services to the container.
+builder.Host.UseOrleans(siloBuilder => { siloBuilder.UseLocalhostClustering(); });
+
+builder.Host.ConfigureLogging(logging => { logging.AddConsole(); });
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -21,11 +26,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseWebSockets();
-
 app.UseHttpsRedirection();
 
-app.UseAuthorization();
+app.UseRouting();
+
+// app.UseAuthorization();
+
+app.MapHub<RockPaperScissorsHub>("/game");
 
 app.MapControllers();
 

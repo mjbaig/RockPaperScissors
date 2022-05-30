@@ -14,4 +14,8 @@
         <PackageReference Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="3.6.2" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Orleans_CodeGenInputs Remove="Controllers\RockPaperScissorsController.cs" />
+    </ItemGroup>
+
 </Project>
