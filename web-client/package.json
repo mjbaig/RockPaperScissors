@@ -1,0 +1,29 @@
+{
+  "name": "web-client",
+  "version": "1.0.0",
+  "description": "The website part of whatever this is",
+  "main": "app.js",
+  "scripts": {
+    "start": "http-server",
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/mjbaig/RockPaperScissors.git"
+  },
+  "keywords": [
+    "rock",
+    "paper",
+    "scissors",
+    "rockpaperscissors"
+  ],
+  "author": "maz",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mjbaig/RockPaperScissors/issues"
+  },
+  "homepage": "https://github.com/mjbaig/RockPaperScissors#readme",
+  "dependencies": {
+    "http-server": "^14.1.0"
+  }
+}
