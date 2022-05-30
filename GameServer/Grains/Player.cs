@@ -149,6 +149,12 @@ public class Player : Grain, IPlayer
     // Player adds self to a queue in the match maker grain.
     public Task JoinMatchMakerQueue()
     {
+
+        if (_connectionId == null)
+        {
+            throw new Exception("no context");
+        }
+
         if (this._playerState == PlayerState.InGame)
         {
             throw new AlreadyInGameException();

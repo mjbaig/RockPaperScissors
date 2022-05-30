@@ -7,11 +7,11 @@ namespace GameServer.Hubs;
 
 public interface IGameHub
 {
-    Task SendMove();
+    Task SendMove(string playerName, RockPaperScissorsMove rockPaperScissorsMove);
     Task GetState(string playerId);
-    Task<MatchResponse> GetLastMatchResponse();
+    Task<MatchResponse> GetLastMatchResponse(string playerName);
     Task JoinQueue(string playerName);
-    Task<AvailableMethods> GetAvailableMethods();
+    Task<List<AvailableMethods>> GetAvailableMethods(string playerName);
 
     Task SignIn(string playerName);
 
@@ -20,11 +20,10 @@ public interface IGameHub
 
 public class RockPaperScissorsHub : Hub, IGameHub
 {
-
     private IClusterClient _client;
 
     private ILogger<RockPaperScissorsHub> _logger;
-    
+
     public RockPaperScissorsHub(ILogger<RockPaperScissorsHub> logger, IClusterClient client)
     {
         _logger = logger;
@@ -32,9 +31,11 @@ public class RockPaperScissorsHub : Hub, IGameHub
     }
 
 
-    public async Task SendMove()
+    public async Task SendMove(string playerName, RockPaperScissorsMove rockPaperScissorsMove)
     {
-        throw new NotImplementedException();
+        var player = _client.GetGrain<IPlayer>(playerName);
+
+        await player.SendMoveToGameServer(rockPaperScissorsMove);
     }
 
     public async Task GetState(string playerId)
@@ -50,9 +51,12 @@ public class RockPaperScissorsHub : Hub, IGameHub
         await Clients.Clients(new List<string>() { connectionId }).SendAsync("GetState", state, gameState);
     }
 
-    public async Task<MatchResponse> GetLastMatchResponse()
+    public async Task<MatchResponse> GetLastMatchResponse(string playerName)
     {
-        throw new NotImplementedException();
+        var player = _client.GetGrain<IPlayer>(playerName);
+
+        return await player.GetLastMatchResponse();
+
     }
 
     public async Task JoinQueue(string playerName)
@@ -60,12 +64,13 @@ public class RockPaperScissorsHub : Hub, IGameHub
         var player = _client.GetGrain<IPlayer>(playerName);
 
         await player.JoinMatchMakerQueue();
-
     }
 
-    public async Task<AvailableMethods> GetAvailableMethods()
+    public async Task<List<AvailableMethods>> GetAvailableMethods(string playerName)
     {
-        throw new NotImplementedException();
+        var player = _client.GetGrain<IPlayer>(playerName);
+
+        return await player.GetAvailableMethods();
     }
 
     public async Task SignIn(string playerName)
@@ -74,13 +79,10 @@ public class RockPaperScissorsHub : Hub, IGameHub
 
         await player.Subscribe(Context.ConnectionId);
     }
-    
+
 
     public async Task ReceivePlayerStatus(PlayerState playerState, PlayerGameState playerGameState, string connectionId)
     {
-        _logger.LogInformation("This works {}", connectionId);
         await Clients.Clients(new List<string> { connectionId }).SendAsync("GetState", playerState, playerGameState);
     }
 }
-
-
