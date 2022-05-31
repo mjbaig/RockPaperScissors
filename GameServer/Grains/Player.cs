@@ -19,6 +19,8 @@ public interface IPlayer : IGrainWithStringKey
 
     Task SendMoveToGameServer(RockPaperScissorsMove move);
 
+    Task<MatchResponse> GetLastMatchResponse();
+
     Task Subscribe(string connectionId);
 }
 
@@ -231,6 +233,16 @@ public class Player : Grain, IPlayer
     public Task<PlayerState> GetState()
     {
         return Task.FromResult<PlayerState>(_playerState);
+    }
+
+    public Task<MatchResponse> GetLastMatchResponse()
+    {
+        if (_lastMatchResponse != null)
+        {
+            return Task.FromResult(_lastMatchResponse);
+        }
+
+        throw new NeverPlayedAGameException();
     }
 
     public Task<PlayerGameState> GetGameState()
