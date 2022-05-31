@@ -172,14 +172,22 @@ public class Game : Grain, IGame
 
         if (playerTwoMatchResult == MatchResult.Win) _playerTwoWins++;
 
-        if (_playerOneWins == 2 || _playerTwoWins == 2) _gameState = GameState.Ended;
+        bool isPlayerOneWinner = false;
+        bool isPlayerTwoWinner = false;
+        
+        if (_playerOneWins == 2 || _playerTwoWins == 2)
+        {
+            _gameState = GameState.Ended;
+            isPlayerOneWinner = _playerOneWins == 2;
+            isPlayerTwoWinner = _playerTwoWins == 2;
+        }
 
         _playerMoveMap = new Dictionary<string, RockPaperScissorsMove>();
-
+        
         var matchResponseDictionary = new Dictionary<string, MatchResponse>
         {
-            [playerOneId] = new(playerOneMove, playerOneMatchResult, _playerOneWins, _gameState),
-            [playerTwoId] = new(playerTwoMove, playerTwoMatchResult, _playerTwoWins, _gameState)
+            [playerOneId] = new(playerOneMove, playerOneMatchResult, _playerOneWins, _gameState, isPlayerOneWinner),
+            [playerTwoId] = new(playerTwoMove, playerTwoMatchResult, _playerTwoWins, _gameState, isPlayerTwoWinner)
         };
 
         return matchResponseDictionary;
@@ -212,11 +220,12 @@ public class MatchResponse
     public MatchResponse(RockPaperScissorsMove playerMove,
         MatchResult playerResult,
         int playerWins,
-        GameState gameState)
+        GameState gameState, bool isMatchWon)
     {
         PlayerMove = playerMove.ToString();
         PlayerResult = playerResult.ToString();
         GameState = gameState;
+        this.isMatchWon = isMatchWon;
         PlayerWins = playerWins;
     }
 
@@ -226,4 +235,7 @@ public class MatchResponse
     public string PlayerMove { get; }
 
     public string PlayerResult { get; }
+    
+    public bool isMatchWon { get; }
+    
 }

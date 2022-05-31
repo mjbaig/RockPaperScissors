@@ -44,6 +44,17 @@ public enum AvailableMethods
     JoinQueue
 }
 
+public class PlayerData {
+    public PlayerData(int wins, int losses)
+    {
+        Wins = wins;
+        Losses = losses;
+    }
+
+    public int Wins { get; set; }
+    public int Losses { get; set; }
+}
+
 public class Player : Grain, IPlayer
 {
     private readonly IRockPaperScissorsClientContext _context;
@@ -56,25 +67,22 @@ public class Player : Grain, IPlayer
 
     private MatchResponse? _lastMatchResponse;
 
-    private int _losses;
-
     private PlayerGameState _playerGameState;
 
     private PlayerState _playerState;
 
-    private int _wins;
-
     private readonly IMetrics _metrics;
+
+    private readonly PlayerData _playerData;
 
     public Player(ILogger<Player> logger, IRockPaperScissorsClientContext context)
     {
         number = 0;
         _logger = logger;
         _playerState = PlayerState.InMenu;
-        _wins = 0;
-        _losses = 0;
         _context = context;
-        _metrics = GrainFactory.GetGrain<IMetrics>(Guid.Empty);
+        // _metrics = GrainFactory.GetGrain<IMetrics>(Guid.Empty);
+        _playerData = new PlayerData(0, 0);
     }
 
     private int number { get; }
@@ -141,6 +149,7 @@ public class Player : Grain, IPlayer
         {
             ChangePlayerState(PlayerState.InMenu);
             _game = null;
+            _playerData.Losses += 1;
         }
         else
         {
