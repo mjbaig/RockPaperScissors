@@ -8,12 +8,14 @@ namespace GameServerTest;
 
 public class Utils
 {
-    public class TestSiloConfigurations : ISiloBuilderConfigurator {
-        public void Configure(ISiloHostBuilder hostBuilder) {
+    public class TestSiloConfigurations : ISiloBuilderConfigurator
+    {
+        public void Configure(ISiloHostBuilder hostBuilder)
+        {
             hostBuilder.ConfigureServices(services =>
             {
                 var clientContext = new Mock<IRockPaperScissorsClientContext>();
-                services.AddSingleton<IRockPaperScissorsClientContext>(clientContext.Object);
+                services.AddSingleton(clientContext.Object);
             });
         }
     }
