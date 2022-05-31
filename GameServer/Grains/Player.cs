@@ -64,6 +64,8 @@ public class Player : Grain, IPlayer
 
     private int _wins;
 
+    private readonly IMetrics _metrics;
+
     public Player(ILogger<Player> logger, IRockPaperScissorsClientContext context)
     {
         number = 0;
@@ -72,6 +74,7 @@ public class Player : Grain, IPlayer
         _wins = 0;
         _losses = 0;
         _context = context;
+        _metrics = GrainFactory.GetGrain<IMetrics>(Guid.Empty);
     }
 
     private int number { get; }
