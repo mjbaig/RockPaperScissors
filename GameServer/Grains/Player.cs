@@ -147,8 +147,6 @@ public class Player : Grain, IPlayer
 
         if (matchResponse.GameState == GameState.Ended)
         {
-            ChangePlayerState(PlayerState.InMenu);
-            _game = null;
             if (_lastMatchResponse.IsMatchWon)
             {
                 _playerData.Wins += 1;
@@ -157,6 +155,8 @@ public class Player : Grain, IPlayer
             {
                 _playerData.Losses += 1;
             }
+            ChangePlayerState(PlayerState.InMenu);
+            _game = null;
         }
         else
         {
