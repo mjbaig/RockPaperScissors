@@ -9,28 +9,26 @@ public interface IGame : IGrainWithGuidKey
     public Task RegisterPlayer(IPlayer player);
 
     public Task<GameState> GetGameState();
-
 }
 
 public class Game : Grain, IGame
 {
+    private readonly ILogger<Game> _logger;
     private readonly Dictionary<string, IPlayer> _playerKeyMap;
+
+    private GameState _gameState;
 
     private int _playerCount;
 
     private Dictionary<string, RockPaperScissorsMove> _playerMoveMap;
 
-    private readonly ILogger<Game> _logger;
-
     private string? _playerOneId;
-    
+
     private int _playerOneWins;
 
     private string? _playerTwoId;
 
     private int _playerTwoWins;
-
-    private GameState _gameState;
 
     public Game(ILogger<Game> logger)
     {
@@ -51,20 +49,11 @@ public class Game : Grain, IGame
 
     public Task SubmitMove(string playerKey, RockPaperScissorsMove move)
     {
-        if (_gameState == GameState.Ended)
-        {
-            throw new Exception("this game has ended");
-        }
+        if (_gameState == GameState.Ended) throw new Exception("this game has ended");
 
-        if (!_playerKeyMap.ContainsKey(playerKey))
-        {
-            throw new Exception("You never registered to play moron");
-        }
+        if (!_playerKeyMap.ContainsKey(playerKey)) throw new Exception("You never registered to play moron");
 
-        if (_playerMoveMap.ContainsKey(playerKey))
-        {
-            throw new Exception("You already submitted a move idiot");
-        }
+        if (_playerMoveMap.ContainsKey(playerKey)) throw new Exception("You already submitted a move idiot");
 
         _playerMoveMap[playerKey] = move;
 
@@ -78,6 +67,36 @@ public class Game : Grain, IGame
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task RegisterPlayer(IPlayer player)
+    {
+        if (_playerCount >= 2) throw new Exception("Too many dang players");
+
+        _playerCount++;
+        _playerKeyMap[player.GetPrimaryKeyString()] = player;
+
+        if (_playerCount == 2)
+        {
+            var playerKeys = _playerKeyMap.Keys.ToList();
+
+            _playerOneId = playerKeys[0];
+            var player1 = _playerKeyMap[_playerOneId];
+            player1.StartMatchFromGameServer(this);
+
+            _playerTwoId = playerKeys[1];
+            var player2 = _playerKeyMap[_playerTwoId];
+            player2.StartMatchFromGameServer(this);
+
+            _gameState = GameState.Ongoing;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<GameState> GetGameState()
+    {
+        return Task.FromResult(_gameState);
     }
 
     private Dictionary<string, MatchResponse> ExecuteTurn()
@@ -149,64 +168,21 @@ public class Game : Grain, IGame
             }
         }
 
-        if (playerOneMatchResult == MatchResult.Win)
-        {
-            _playerOneWins++;
-        }
+        if (playerOneMatchResult == MatchResult.Win) _playerOneWins++;
 
-        if (playerTwoMatchResult == MatchResult.Win)
-        {
-            _playerTwoWins++;
-        }
+        if (playerTwoMatchResult == MatchResult.Win) _playerTwoWins++;
 
-        if (_playerOneWins == 2 || _playerTwoWins == 2)
-        {
-            _gameState = GameState.Ended;
-        }
+        if (_playerOneWins == 2 || _playerTwoWins == 2) _gameState = GameState.Ended;
 
         _playerMoveMap = new Dictionary<string, RockPaperScissorsMove>();
 
         var matchResponseDictionary = new Dictionary<string, MatchResponse>
         {
-            [playerOneId] = new MatchResponse(playerOneMove,playerOneMatchResult, _playerOneWins, _gameState),
-            [playerTwoId] = new MatchResponse(playerTwoMove, playerTwoMatchResult, _playerTwoWins, _gameState)
+            [playerOneId] = new(playerOneMove, playerOneMatchResult, _playerOneWins, _gameState),
+            [playerTwoId] = new(playerTwoMove, playerTwoMatchResult, _playerTwoWins, _gameState)
         };
 
         return matchResponseDictionary;
-    }
-
-    public Task RegisterPlayer(IPlayer player)
-    {
-        if (_playerCount >= 2)
-        {
-            throw new Exception("Too many dang players");
-        }
-
-        _playerCount++;
-        _playerKeyMap[player.GetPrimaryKeyString()] = player;
-
-        if (_playerCount == 2)
-        {
-            var playerKeys = _playerKeyMap.Keys.ToList();
-            
-            _playerOneId = playerKeys[0];
-            var player1 = _playerKeyMap[_playerOneId];
-            player1.StartMatchFromGameServer(this);
-            
-            _playerTwoId = playerKeys[1];
-            var player2 = _playerKeyMap[_playerTwoId];
-            player2.StartMatchFromGameServer(this);
-            
-            _gameState = GameState.Ongoing;
-            
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public Task<GameState> GetGameState()
-    {
-        return Task.FromResult(_gameState);
     }
 }
 
@@ -214,26 +190,26 @@ public enum GameState
 {
     WaitingForPlayers,
     Ongoing,
-    Ended,
+    Ended
 }
 
 public enum MatchResult
 {
     Win,
     Lose,
-    Tie,
+    Tie
 }
 
 public enum RockPaperScissorsMove
 {
     Rock,
     Paper,
-    Scissors,
+    Scissors
 }
 
 public class MatchResponse
 {
-    public MatchResponse(RockPaperScissorsMove playerMove, 
+    public MatchResponse(RockPaperScissorsMove playerMove,
         MatchResult playerResult,
         int playerWins,
         GameState gameState)
@@ -250,5 +226,4 @@ public class MatchResponse
     public string PlayerMove { get; }
 
     public string PlayerResult { get; }
-    
 }

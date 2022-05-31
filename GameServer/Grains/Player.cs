@@ -1,6 +1,5 @@
 using GameServer.Exceptions;
 using GameServer.Hubs;
-using Microsoft.AspNetCore.SignalR;
 using Orleans;
 
 namespace GameServer.Grains;
@@ -28,13 +27,13 @@ public enum PlayerState
 {
     InGame,
     InQueue,
-    InMenu,
+    InMenu
 }
 
 public enum PlayerGameState
 {
     Ready,
-    Waiting,
+    Waiting
 }
 
 public enum AvailableMethods
@@ -42,28 +41,28 @@ public enum AvailableMethods
     SendMove,
     GetState,
     GetLastMatchResponse,
-    JoinQueue,
+    JoinQueue
 }
 
 public class Player : Grain, IPlayer
 {
-    private int number { get; set; }
+    private readonly IRockPaperScissorsClientContext _context;
 
     private readonly ILogger<Player> _logger;
 
+    private string? _connectionId;
+
     private IGame? _game;
 
-    private PlayerState _playerState;
-
-    private PlayerGameState _playerGameState;
-
-    private int _wins;
+    private MatchResponse? _lastMatchResponse;
 
     private int _losses;
 
-    private string? _connectionId;
+    private PlayerGameState _playerGameState;
 
-    private readonly IRockPaperScissorsClientContext _context;
+    private PlayerState _playerState;
+
+    private int _wins;
 
     public Player(ILogger<Player> logger, IRockPaperScissorsClientContext context)
     {
@@ -75,35 +74,7 @@ public class Player : Grain, IPlayer
         _context = context;
     }
 
-    private MatchResponse? _lastMatchResponse;
-
-    private List<AvailableMethods> GetAvailableMethods()
-    {
-        var availableMethods = (_playerState, _playerGameState) switch
-        {
-            (PlayerState.InGame, PlayerGameState.Ready) => new List<AvailableMethods>()
-            {
-                AvailableMethods.SendMove,
-            },
-
-            (PlayerState.InGame, PlayerGameState.Waiting) => new List<AvailableMethods>()
-            {
-            },
-
-            (PlayerState.InMenu, _) => new List<AvailableMethods>()
-            {
-                AvailableMethods.JoinQueue,
-            },
-
-            (PlayerState.InQueue, _) => new List<AvailableMethods>()
-            {
-            },
-
-            (_, _) => new List<AvailableMethods>() { },
-        };
-
-        return availableMethods;
-    }
+    private int number { get; }
 
     public Task Subscribe(string connectionId)
     {
@@ -112,65 +83,14 @@ public class Player : Grain, IPlayer
         return Task.CompletedTask;
     }
 
-    private async void NotifyClientsOfStateChange()
-    {
-        if (_connectionId != null)
-        {
-            await _context.SendStateToClient(_playerState, _playerGameState, _connectionId);
-            await _context.SendAvailableMethodsToClient(GetAvailableMethods(), _connectionId);
-        }
-        else
-        {
-            throw new Exception("You have no connection id... how?");
-        }
-    }
-
-    private async void NotifyClientsOfMatchResults()
-    {
-        if (_connectionId != null)
-        {
-            if (_lastMatchResponse != null)
-            {
-                await _context.SendMatchResponseToClient(_lastMatchResponse, _connectionId);
-            }
-        }
-        else
-        {
-            throw new Exception("You have no connection id... how?");
-        }
-    }
-
-    private void ChangePlayerState(PlayerState playerState)
-    {
-        _playerState = playerState;
-        //TODO notify observer
-        NotifyClientsOfStateChange();
-    }
-
-    private void ChangePlayerGameState(PlayerGameState playerGameState)
-    {
-        _playerGameState = playerGameState;
-        //TODO notify observer
-        NotifyClientsOfStateChange();
-    }
-
 // Player adds self to a queue in the match maker grain.
     public Task JoinMatchMakerQueue()
     {
-        if (_connectionId == null)
-        {
-            throw new Exception("no context");
-        }
+        if (_connectionId == null) throw new Exception("no context");
 
-        if (this._playerState == PlayerState.InGame)
-        {
-            throw new AlreadyInGameException();
-        }
+        if (_playerState == PlayerState.InGame) throw new AlreadyInGameException();
 
-        if (this._playerState == PlayerState.InQueue)
-        {
-            throw new AlreadyInQueueException();
-        }
+        if (_playerState == PlayerState.InQueue) throw new AlreadyInQueueException();
 
         var matchMaker = GrainFactory.GetGrain<IMatchMaker>(Guid.Empty);
 
@@ -232,15 +152,12 @@ public class Player : Grain, IPlayer
 
     public Task<PlayerState> GetState()
     {
-        return Task.FromResult<PlayerState>(_playerState);
+        return Task.FromResult(_playerState);
     }
 
     public Task<MatchResponse> GetLastMatchResponse()
     {
-        if (_lastMatchResponse != null)
-        {
-            return Task.FromResult(_lastMatchResponse);
-        }
+        if (_lastMatchResponse != null) return Task.FromResult(_lastMatchResponse);
 
         throw new NeverPlayedAGameException();
     }
@@ -248,5 +165,68 @@ public class Player : Grain, IPlayer
     public Task<PlayerGameState> GetGameState()
     {
         return Task.FromResult(_playerGameState);
+    }
+
+    private List<AvailableMethods> GetAvailableMethods()
+    {
+        var availableMethods = (_playerState, _playerGameState) switch
+        {
+            (PlayerState.InGame, PlayerGameState.Ready) => new List<AvailableMethods>
+            {
+                AvailableMethods.SendMove
+            },
+
+            (PlayerState.InGame, PlayerGameState.Waiting) => new List<AvailableMethods>(),
+
+            (PlayerState.InMenu, _) => new List<AvailableMethods>
+            {
+                AvailableMethods.JoinQueue
+            },
+
+            (PlayerState.InQueue, _) => new List<AvailableMethods>(),
+
+            (_, _) => new List<AvailableMethods>()
+        };
+
+        return availableMethods;
+    }
+
+    private async void NotifyClientsOfStateChange()
+    {
+        if (_connectionId != null)
+        {
+            await _context.SendStateToClient(_playerState, _playerGameState, _connectionId);
+            await _context.SendAvailableMethodsToClient(GetAvailableMethods(), _connectionId);
+        }
+        else
+        {
+            throw new Exception("You have no connection id... how?");
+        }
+    }
+
+    private async void NotifyClientsOfMatchResults()
+    {
+        if (_connectionId != null)
+        {
+            if (_lastMatchResponse != null) await _context.SendMatchResponseToClient(_lastMatchResponse, _connectionId);
+        }
+        else
+        {
+            throw new Exception("You have no connection id... how?");
+        }
+    }
+
+    private void ChangePlayerState(PlayerState playerState)
+    {
+        _playerState = playerState;
+        //TODO notify observer
+        NotifyClientsOfStateChange();
+    }
+
+    private void ChangePlayerGameState(PlayerGameState playerGameState)
+    {
+        _playerGameState = playerGameState;
+        //TODO notify observer
+        NotifyClientsOfStateChange();
     }
 }

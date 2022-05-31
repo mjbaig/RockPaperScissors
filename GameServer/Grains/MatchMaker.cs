@@ -1,19 +1,17 @@
 using Orleans;
-using Orleans.Concurrency;
 
 namespace GameServer.Grains;
 
-public interface IMatchMaker: IGrainWithGuidKey
+public interface IMatchMaker : IGrainWithGuidKey
 {
     Task AddToQueue(IPlayer player);
 }
 
 public class MatchMaker : Grain, IMatchMaker
 {
+    private readonly ILogger<MatchMaker> _logger;
 
     private readonly Queue<IPlayer> _players;
-
-    private readonly ILogger<MatchMaker> _logger;
 
     public MatchMaker(ILogger<MatchMaker> logger)
     {
@@ -29,18 +27,17 @@ public class MatchMaker : Grain, IMatchMaker
 
         if (_players.Count >= 2)
         {
-            Guid newMatchKey = Guid.NewGuid();
+            var newMatchKey = Guid.NewGuid();
 
-            IGame game = GrainFactory.GetGrain<IGame>(newMatchKey);
+            var game = GrainFactory.GetGrain<IGame>(newMatchKey);
 
             game.RegisterPlayer(_players.Dequeue());
-            
+
             game.RegisterPlayer(_players.Dequeue());
         }
-        
+
         _logger.LogInformation("Number of players in queue: {}", _players.Count);
 
         return Task.CompletedTask;
     }
-
 }
