@@ -5,7 +5,7 @@ EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
-COPY ["GameServer.csproj", "GameServer/"]
+COPY [".", "GameServer/"]
 RUN dotnet restore "GameServer/GameServer.csproj"
 COPY . .
 WORKDIR "/src/GameServer"
