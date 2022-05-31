@@ -57,7 +57,8 @@ public class RockPaperScissorsHub : Hub, IGameHub
 
 public interface IRockPaperScissorsClientContext
 {
-    Task SendStateToClient(PlayerState playerState, PlayerGameState playerGameState, string connectionId);
+    Task SendStateToClient(PlayerState playerState, PlayerGameState playerGameState, PlayerData playerData,
+        string connectionId);
 
     Task SendAvailableMethodsToClient(List<AvailableMethods> availableMethodsList, string connectionId);
 
@@ -73,10 +74,11 @@ public class RockPaperScissorsClientContext : IRockPaperScissorsClientContext
         _hub = hub;
     }
 
-    public async Task SendStateToClient(PlayerState playerState, PlayerGameState playerGameState, string connectionId)
+    public async Task SendStateToClient(PlayerState playerState, PlayerGameState playerGameState, PlayerData playerData,
+        string connectionId)
     {
         await _hub.Clients.Clients(new List<string> { connectionId })
-            .SendAsync("state", playerState.ToString(), playerGameState.ToString());
+            .SendAsync("state", playerState.ToString(), playerGameState.ToString(), playerData);
     }
 
     public async Task SendAvailableMethodsToClient(List<AvailableMethods> availableMethodsList, string connectionId)

@@ -23,9 +23,15 @@
         })
             .build();
 
-        connection.on("State", (e, r) => {
+        connection.on("State", (e, r, d) => {
             var div = document.getElementById('state');
-            div.innerHTML = JSON.stringify(e);
+            div.innerHTML = e;
+
+            var wins = document.getElementById('wins');
+            wins.innerHTML = d.wins;
+
+            var losses = document.getElementById('wins');
+            losses.innerHTML = d.losses;
         });
 
         connection.on("AvailableMethods", (e) => console.log(e));
@@ -68,6 +74,11 @@
     </select>
 
     <button onclick="submitMove()">Submit Move</button>
+
+    <div id="data">
+        Wins <span id="wins">0</span>
+        Losses <span id="losses">0</span>
+    </div>
 
     <div id="state">Logged Out</div>
     <div id="gameLog"></div>

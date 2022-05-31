@@ -149,7 +149,14 @@ public class Player : Grain, IPlayer
         {
             ChangePlayerState(PlayerState.InMenu);
             _game = null;
-            _playerData.Losses += 1;
+            if (_lastMatchResponse.isMatchWon)
+            {
+                _playerData.Wins += 1;
+            }
+            else
+            {
+                _playerData.Losses += 1;
+            }
         }
         else
         {
@@ -207,7 +214,7 @@ public class Player : Grain, IPlayer
     {
         if (_connectionId != null)
         {
-            await _context.SendStateToClient(_playerState, _playerGameState, _connectionId);
+            await _context.SendStateToClient(_playerState, _playerGameState, _playerData, _connectionId);
             await _context.SendAvailableMethodsToClient(GetAvailableMethods(), _connectionId);
         }
         else
