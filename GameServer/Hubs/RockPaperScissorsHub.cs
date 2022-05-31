@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using GameServer.Grains;
 using Microsoft.AspNetCore.SignalR;
 using Orleans;
@@ -7,15 +8,9 @@ namespace GameServer.Hubs;
 
 public interface IGameHub
 {
-    Task SendMove(string playerName, RockPaperScissorsMove rockPaperScissorsMove);
-    Task GetState(string playerId);
-    Task<MatchResponse> GetLastMatchResponse(string playerName);
+    Task SendMove(string playerName, string move);
     Task JoinQueue(string playerName);
-    Task<List<AvailableMethods>> GetAvailableMethods(string playerName);
-
     Task SignIn(string playerName);
-
-    Task ReceivePlayerStatus(PlayerState playerState, PlayerGameState playerGameState, string connectionId);
 }
 
 public class RockPaperScissorsHub : Hub, IGameHub
@@ -31,46 +26,27 @@ public class RockPaperScissorsHub : Hub, IGameHub
     }
 
 
-    public async Task SendMove(string playerName, RockPaperScissorsMove rockPaperScissorsMove)
+    public async Task SendMove(string playerName, string move)
     {
         var player = _client.GetGrain<IPlayer>(playerName);
+
+        var rockPaperScissorsMove = move.ToLower() switch
+        {
+            "rock" => RockPaperScissorsMove.Rock,
+            "paper" => RockPaperScissorsMove.Paper,
+            "scissors" => RockPaperScissorsMove.Scissors,
+            _ => throw new Exception("not a valid move")
+        };
 
         await player.SendMoveToGameServer(rockPaperScissorsMove);
     }
-
-    public async Task GetState(string playerId)
-    {
-        var connectionId = Context.ConnectionId;
-
-        var player = _client.GetGrain<IPlayer>(playerId);
-
-        var state = await player.GetState();
-
-        var gameState = await player.GetGameState();
-
-        await Clients.Clients(new List<string>() { connectionId }).SendAsync("GetState", state, gameState);
-    }
-
-    public async Task<MatchResponse> GetLastMatchResponse(string playerName)
-    {
-        var player = _client.GetGrain<IPlayer>(playerName);
-
-        return await player.GetLastMatchResponse();
-
-    }
-
+    
+    
     public async Task JoinQueue(string playerName)
     {
         var player = _client.GetGrain<IPlayer>(playerName);
 
         await player.JoinMatchMakerQueue();
-    }
-
-    public async Task<List<AvailableMethods>> GetAvailableMethods(string playerName)
-    {
-        var player = _client.GetGrain<IPlayer>(playerName);
-
-        return await player.GetAvailableMethods();
     }
 
     public async Task SignIn(string playerName)
@@ -79,10 +55,41 @@ public class RockPaperScissorsHub : Hub, IGameHub
 
         await player.Subscribe(Context.ConnectionId);
     }
+}
 
+public interface IRockPaperScissorsClientContext
+{
+    Task SendStateToClient(PlayerState playerState, PlayerGameState playerGameState, string connectionId);
+    
+    Task SendAvailableMethodsToClient(List<AvailableMethods> availableMethodsList, string connectionId);
 
-    public async Task ReceivePlayerStatus(PlayerState playerState, PlayerGameState playerGameState, string connectionId)
+    Task SendMatchResponseToClient(MatchResponse matchResponse, string connectionId);
+}
+
+public class RockPaperScissorsClientContext : IRockPaperScissorsClientContext
+{
+    private readonly IHubContext<RockPaperScissorsHub> _hub;
+
+    public RockPaperScissorsClientContext(IHubContext<RockPaperScissorsHub> hub)
     {
-        await Clients.Clients(new List<string> { connectionId }).SendAsync("GetState", playerState, playerGameState);
+        _hub = hub;
+    }
+
+    public async Task SendStateToClient(PlayerState playerState, PlayerGameState playerGameState, string connectionId)
+    {
+        await _hub.Clients.Clients(new List<string> { connectionId })
+            .SendAsync("state", playerState.ToString(), playerGameState.ToString());
+    }
+
+    public async Task SendAvailableMethodsToClient(List<AvailableMethods> availableMethodsList, string connectionId)
+    {
+        await _hub.Clients.Clients(new List<string> { connectionId })
+            .SendAsync("availableMethods", from x in availableMethodsList select x.ToString());
+    }
+
+    public async Task SendMatchResponseToClient(MatchResponse matchResponse, string connectionId)
+    {
+        await _hub.Clients.Clients(new List<string> { connectionId })
+            .SendAsync("matchResponse", matchResponse);
     }
 }

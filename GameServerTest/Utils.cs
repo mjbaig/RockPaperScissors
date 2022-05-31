@@ -12,8 +12,8 @@ public class Utils
         public void Configure(ISiloHostBuilder hostBuilder) {
             hostBuilder.ConfigureServices(services =>
             {
-                var gameHubMock = new Mock<IGameHub>();
-                services.AddSingleton<IGameHub>(gameHubMock.Object);
+                var clientContext = new Mock<IRockPaperScissorsClientContext>();
+                services.AddSingleton<IRockPaperScissorsClientContext>(clientContext.Object);
             });
         }
     }

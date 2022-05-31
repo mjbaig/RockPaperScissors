@@ -1,5 +1,6 @@
 using GameServer.Exceptions;
 using GameServer.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using Orleans;
 
 namespace GameServer.Grains;
@@ -17,10 +18,6 @@ public interface IPlayer : IGrainWithStringKey
     Task<PlayerGameState> GetGameState();
 
     Task SendMoveToGameServer(RockPaperScissorsMove move);
-
-    Task<MatchResponse> GetLastMatchResponse();
-
-    Task<List<AvailableMethods>> GetAvailableMethods();
 
     Task Subscribe(string connectionId);
 }
@@ -64,67 +61,76 @@ public class Player : Grain, IPlayer
 
     private string? _connectionId;
 
-    private IGameHub _hub;
+    private readonly IRockPaperScissorsClientContext _context;
 
-    public Player(ILogger<Player> logger, IGameHub hub)
+    public Player(ILogger<Player> logger, IRockPaperScissorsClientContext context)
     {
         number = 0;
         _logger = logger;
         _playerState = PlayerState.InMenu;
         _wins = 0;
         _losses = 0;
-        _hub = hub;
+        _context = context;
     }
 
-    public MatchResponse? LastMatchResponse { get; set; }
+    private MatchResponse? _lastMatchResponse;
 
-    public Task<List<AvailableMethods>> GetAvailableMethods()
+    private List<AvailableMethods> GetAvailableMethods()
     {
         var availableMethods = (_playerState, _playerGameState) switch
         {
             (PlayerState.InGame, PlayerGameState.Ready) => new List<AvailableMethods>()
             {
                 AvailableMethods.SendMove,
-                AvailableMethods.GetState,
-                AvailableMethods.GetLastMatchResponse
             },
 
             (PlayerState.InGame, PlayerGameState.Waiting) => new List<AvailableMethods>()
             {
-                AvailableMethods.GetState,
-                AvailableMethods.GetLastMatchResponse
             },
 
             (PlayerState.InMenu, _) => new List<AvailableMethods>()
             {
                 AvailableMethods.JoinQueue,
-                AvailableMethods.GetState,
-                AvailableMethods.GetLastMatchResponse
             },
 
             (PlayerState.InQueue, _) => new List<AvailableMethods>()
             {
-                AvailableMethods.GetState,
-                AvailableMethods.GetLastMatchResponse
             },
 
-            (_, _) => new List<AvailableMethods>() { AvailableMethods.GetState },
+            (_, _) => new List<AvailableMethods>() { },
         };
 
-        return Task.FromResult(availableMethods);
+        return availableMethods;
     }
 
     public Task Subscribe(string connectionId)
     {
         _connectionId = connectionId;
+        NotifyClientsOfStateChange();
         return Task.CompletedTask;
     }
 
-    private void NotifySubscribers()
+    private async void NotifyClientsOfStateChange()
     {
         if (_connectionId != null)
         {
-            _hub.ReceivePlayerStatus(_playerState, _playerGameState, _connectionId);
+            await _context.SendStateToClient(_playerState, _playerGameState, _connectionId);
+            await _context.SendAvailableMethodsToClient(GetAvailableMethods(), _connectionId);
+        }
+        else
+        {
+            throw new Exception("You have no connection id... how?");
+        }
+    }
+
+    private async void NotifyClientsOfMatchResults()
+    {
+        if (_connectionId != null)
+        {
+            if (_lastMatchResponse != null)
+            {
+                await _context.SendMatchResponseToClient(_lastMatchResponse, _connectionId);
+            }
         }
         else
         {
@@ -136,20 +142,19 @@ public class Player : Grain, IPlayer
     {
         _playerState = playerState;
         //TODO notify observer
-        NotifySubscribers();
+        NotifyClientsOfStateChange();
     }
 
     private void ChangePlayerGameState(PlayerGameState playerGameState)
     {
         _playerGameState = playerGameState;
         //TODO notify observer
-        NotifySubscribers();
+        NotifyClientsOfStateChange();
     }
 
-    // Player adds self to a queue in the match maker grain.
+// Player adds self to a queue in the match maker grain.
     public Task JoinMatchMakerQueue()
     {
-
         if (_connectionId == null)
         {
             throw new Exception("no context");
@@ -172,7 +177,7 @@ public class Player : Grain, IPlayer
         return matchMaker.AddToQueue(this);
     }
 
-    // The Game grain calls this method to put the player into a game state.
+// The Game grain calls this method to put the player into a game state.
     public Task StartMatchFromGameServer(IGame game)
     {
         _game = game;
@@ -186,7 +191,7 @@ public class Player : Grain, IPlayer
         return Task.CompletedTask;
     }
 
-    // This player sends a move to the Game grain and enter a waiting state.
+// This player sends a move to the Game grain and enter a waiting state.
     public Task SendMoveToGameServer(RockPaperScissorsMove move)
     {
         if (_game != null)
@@ -202,10 +207,10 @@ public class Player : Grain, IPlayer
         return Task.CompletedTask;
     }
 
-    // The Game grain calls this method to send the player the match results
+// The Game grain calls this method to send the player the match results
     public Task SendResultFromGameServer(MatchResponse matchResponse)
     {
-        LastMatchResponse = matchResponse;
+        _lastMatchResponse = matchResponse;
 
         if (matchResponse.GameState == GameState.Ended)
         {
@@ -217,23 +222,15 @@ public class Player : Grain, IPlayer
             ChangePlayerGameState(PlayerGameState.Ready);
         }
 
-        _logger.LogInformation(matchResponse.PlayerResult == MatchResult.Win ? "You win" : "You didn't win");
+        NotifyClientsOfStateChange();
+        NotifyClientsOfMatchResults();
+
         return Task.CompletedTask;
     }
 
     public Task<PlayerState> GetState()
     {
         return Task.FromResult<PlayerState>(_playerState);
-    }
-
-    public Task<MatchResponse> GetLastMatchResponse()
-    {
-        if (LastMatchResponse != null)
-        {
-            return Task.FromResult(LastMatchResponse);
-        }
-
-        throw new NeverPlayedAGameException();
     }
 
     public Task<PlayerGameState> GetGameState()

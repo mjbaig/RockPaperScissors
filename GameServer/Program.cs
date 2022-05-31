@@ -5,6 +5,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<IGameHub, RockPaperScissorsHub>();
 
+builder.Services.AddSingleton<IRockPaperScissorsClientContext, RockPaperScissorsClientContext>();
+
 // Add services to the container.
 builder.Host.UseOrleans(siloBuilder => { siloBuilder.UseLocalhostClustering(); });
 
@@ -22,8 +24,8 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    // app.UseSwagger();
+    // app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();

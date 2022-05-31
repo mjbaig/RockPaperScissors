@@ -238,8 +238,8 @@ public class MatchResponse
         int playerWins,
         GameState gameState)
     {
-        PlayerMove = playerMove;
-        PlayerResult = playerResult;
+        PlayerMove = playerMove.ToString();
+        PlayerResult = playerResult.ToString();
         GameState = gameState;
         PlayerWins = playerWins;
     }
@@ -247,8 +247,8 @@ public class MatchResponse
     public int PlayerWins { get; }
     public GameState GameState { get; }
 
-    public RockPaperScissorsMove PlayerMove { get; }
+    public string PlayerMove { get; }
 
-    public MatchResult PlayerResult { get; }
+    public string PlayerResult { get; }
     
 }

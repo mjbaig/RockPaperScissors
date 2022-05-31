@@ -55,7 +55,9 @@ public class GameTest
         var game = _testCluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
 
         var player1 = _testCluster.GrainFactory.GetGrain<IPlayer>("player1");
+        await player1.Subscribe("1");
         var player2 = _testCluster.GrainFactory.GetGrain<IPlayer>("player2");
+        await player2.Subscribe("2");
 
         await game.RegisterPlayer(player1);
         await game.RegisterPlayer(player2);
@@ -72,7 +74,9 @@ public class GameTest
         var game = _testCluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
 
         var player1 = _testCluster.GrainFactory.GetGrain<IPlayer>("player1");
+        await player1.Subscribe("1");
         var player2 = _testCluster.GrainFactory.GetGrain<IPlayer>("player2");
+        await player2.Subscribe("2");
 
         await player1.Subscribe("1");
         await player2.Subscribe("2");
@@ -129,7 +133,9 @@ public class GameTest
         var game = _testCluster.GrainFactory.GetGrain<IGame>(Guid.Empty);
 
         var player1 = _testCluster.GrainFactory.GetGrain<IPlayer>("player1");
+        await player1.Subscribe("1");
         var player2 = _testCluster.GrainFactory.GetGrain<IPlayer>("player2");
+        await player2.Subscribe("2");
         
         await player1.Subscribe("1");
         await player2.Subscribe("2");
