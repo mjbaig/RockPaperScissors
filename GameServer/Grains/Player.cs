@@ -149,7 +149,7 @@ public class Player : Grain, IPlayer
         {
             ChangePlayerState(PlayerState.InMenu);
             _game = null;
-            if (_lastMatchResponse.isMatchWon)
+            if (_lastMatchResponse.IsMatchWon)
             {
                 _playerData.Wins += 1;
             }

@@ -225,7 +225,7 @@ public class MatchResponse
         PlayerMove = playerMove.ToString();
         PlayerResult = playerResult.ToString();
         GameState = gameState;
-        this.isMatchWon = isMatchWon;
+        this.IsMatchWon = isMatchWon;
         PlayerWins = playerWins;
     }
 
@@ -236,6 +236,6 @@ public class MatchResponse
 
     public string PlayerResult { get; }
     
-    public bool isMatchWon { get; }
+    public bool IsMatchWon { get; }
     
 }
