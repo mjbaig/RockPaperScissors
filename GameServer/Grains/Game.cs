@@ -174,7 +174,7 @@ public class Game : Grain, IGame
 
         bool isPlayerOneWinner = false;
         bool isPlayerTwoWinner = false;
-        
+
         if (_playerOneWins == 2 || _playerTwoWins == 2)
         {
             _gameState = GameState.Ended;
@@ -183,11 +183,15 @@ public class Game : Grain, IGame
         }
 
         _playerMoveMap = new Dictionary<string, RockPaperScissorsMove>();
+
+        int round = _playerOneWins + _playerTwoWins;
         
         var matchResponseDictionary = new Dictionary<string, MatchResponse>
         {
-            [playerOneId] = new(playerOneMove, playerOneMatchResult, _playerOneWins, _gameState, isPlayerOneWinner),
-            [playerTwoId] = new(playerTwoMove, playerTwoMatchResult, _playerTwoWins, _gameState, isPlayerTwoWinner)
+            [playerOneId] = new(playerOneMove, playerOneMatchResult, _playerOneWins, _gameState, isPlayerOneWinner,
+                playerTwoMove, round),
+            [playerTwoId] = new(playerTwoMove, playerTwoMatchResult, _playerTwoWins, _gameState, isPlayerTwoWinner,
+                playerOneMove, round)
         };
 
         return matchResponseDictionary;
@@ -220,12 +224,14 @@ public class MatchResponse
     public MatchResponse(RockPaperScissorsMove playerMove,
         MatchResult playerResult,
         int playerWins,
-        GameState gameState, bool isMatchWon)
+        GameState gameState, bool isMatchWon, RockPaperScissorsMove opponentMove, int round)
     {
         PlayerMove = playerMove.ToString();
         PlayerResult = playerResult.ToString();
         GameState = gameState;
-        this.IsMatchWon = isMatchWon;
+        IsMatchWon = isMatchWon;
+        Round = round;
+        OpponentMove = opponentMove.ToString();
         PlayerWins = playerWins;
     }
 
@@ -234,8 +240,11 @@ public class MatchResponse
 
     public string PlayerMove { get; }
 
+    public string OpponentMove { get; }
+
     public string PlayerResult { get; }
-    
+
     public bool IsMatchWon { get; }
-    
+
+    public int Round { get; }
 }
